@@ -1,0 +1,3 @@
+# Extract parts of big results (*_cpa.txt) files
+
+Simple shell script for extraction of test data ...
