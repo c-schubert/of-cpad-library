@@ -23,7 +23,7 @@ private:
 
         Foam::label targetAlpha = 1;
         Foam::scalar alphaMin = 0.05;
-        bool cellNodeNeighborDetectionActive = true;
+        Foam::label cellConDectMode = 0;
         bool reduceCpadArea = false;
 
         std::vector<cpa> cpaList; // cpa muss ein Template sein? Damit das hier funktioniert?
@@ -65,7 +65,7 @@ public:
             Foam::scalar alphaMin,
             const Foam::dimensionedScalar& rho,
             Foam::boolList& isCpadCell,
-            bool cellNodeNeighborDetectionActive,
+            Foam::label  cellConDectMode,
             std::vector<cpa>& cpaList
         );
 

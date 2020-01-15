@@ -8,12 +8,16 @@ It can be used during runtime as addition to an existing two phase VoF solver, o
 It was developed from me for the automated detection and localization of simulated droplets for the investigation
 of the dripping behavior during the electroslag remelting (ESR) process.
 
-The following properties are written to the report file(s):
+The following properties are written to the report file(s) for each continous phase area
+for each timestep:
+
+  - no of cells
   - x,y,z location
   - mass
   - volume 
   - alpha_max
   - alpha_mean (volume averaged)
+  - connected boundaries
 
 You may choose between detection between cells faces:
 
@@ -130,10 +134,11 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-reportFileName  "cpa.txt"; // filename suffix
-targetPhase     1;         // alpha1
-alphaMinThreshold 0.2;     // min. threshold for continuous area detection
-detectOverCellNodes on;    // continuous area detection over cells-edges(nodes)=on or cells-faces=off
+reportFileName      "cpa.txt";  // filename suffix
+targetPhase         1;          // alpha1
+alphaMinThreshold   0.2;        // min. threshold for continuous area detection
+detectOver          "faces";    // continuous area detection over: "faces" "edges" or 
+                                // "points"
 ```
 
 ### Parallel considerations

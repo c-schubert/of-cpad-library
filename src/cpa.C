@@ -16,7 +16,7 @@ FoamCpad::cpa::cpa
     const Foam::dimensionedScalar& rho,
     Foam::boolList& isCpadCell,
     Foam::boolList& isCellChecked,
-    bool cellNodeNeighborDetectionActive
+    Foam::label cellConDectMode
 )
 {
 
@@ -32,7 +32,7 @@ FoamCpad::cpa::cpa
         isCpadCell,
         isCellChecked,
         cells,
-        cellNodeNeighborDetectionActive
+        cellConDectMode
     );
 
 
@@ -63,7 +63,7 @@ void FoamCpad::cpa::cpaTreeSearch
     Foam::boolList& isCpadCell,
     Foam::boolList& isCellChecked,
     Foam::labelList& cpaCells,
-    bool cellNodeNeighborDetectionActive
+    Foam::label cellConDectMode
 )
 {
     const Foam::fvMesh &mesh = alpha.mesh();
@@ -74,25 +74,34 @@ void FoamCpad::cpa::cpaTreeSearch
 
     Info << "Cpa tree search from inital cell " << initialCell << endl;
 
+    std::function<Foam::labelList(Foam::label,const Foam::fvMesh&)> cnf;
+   
+    /* only face cell neighboars */
+    if (cellConDectMode == 0)
+    {
+        /* All of cell c's - face neighboars */
+        cnf = &FoamCpad::cellFaceNeighbors;
+    }
+    else if (cellConDectMode == 1)
+    {
+        /* All of cell c's - edge cell neighboars */
+        cnf = &FoamCpad::cellEdgeNeighbors;
+    }
+    else if (cellConDectMode == 2)
+    {
+        /* All of cell c's - point cell neighboars (including over point cell 
+        neighboars - ALL neighbors ...)  */
+        cnf = &FoamCpad::cellPointNeighbors;
+    }
+
+
     forAll(dynamicCpaCellList, i)
     {
         Foam::label c = dynamicCpaCellList[i]; 
 
         // Info << "Cecking Cell: " << c << endl;
-        Foam::labelList cNeighboarCells;
+        Foam::labelList cNeighboarCells = cnf(c, mesh);
 
-        /* only face cell neighboars */
-        if (!cellNodeNeighborDetectionActive)
-        {
-            /* All of cell c's - face neighboars */
-            cNeighboarCells = mesh.cellCells()[c];
-        }
-        else
-        {
-            /* All of cell c's - cell neighboars (including over node point cell 
-            neighboars)  */
-            cNeighboarCells = FoamCpad::cpa::cellEdgeNeighbors(c, mesh);
-        }
 
         Foam::labelList newCpaCells;
 
@@ -133,75 +142,6 @@ void FoamCpad::cpa::cpaTreeSearch
         cpaCells.transfer(dynamicCpaCellList); // Entweder so oder andersherum...
     }
 }
-
-Foam::labelList FoamCpad::cpa::cellEdgeNeighbors
-(
-    Foam::label cell,
-    const Foam::fvMesh &mesh
-)
-{
-    Foam::labelList cEdgeNodes = mesh.cellPoints()[cell];
-    Foam::label maxUniqueNeighbors = 40;
-    Foam::DynamicList<label> uniqueCellEdgeNeighbors(maxUniqueNeighbors);
-
-    // Info << "Edge nodes: " << cEdgeNodes.size() << endl;
-   
-     // musst be greater or equal than max possible length...
-
-    forAll(cEdgeNodes, j)
-    {
-        Foam::labelList cNeighboarCells = mesh.pointCells()[cEdgeNodes[j]];
-
-        // Info << "Edge node Cells: " << cNeighboarCells.size() << endl;
-        
-        forAll(cNeighboarCells, i)
-        {
-            if(uniqueCellEdgeNeighbors.size() < 1)
-            {
-                uniqueCellEdgeNeighbors.append(cNeighboarCells[i]);
-            }
-            else
-            {
-                bool CellIdIsUnique = true;
-
-                forAll(uniqueCellEdgeNeighbors, k)
-                {
-                    if (uniqueCellEdgeNeighbors[k] == cNeighboarCells[i])
-                    {
-                        CellIdIsUnique = false;
-                    }
-                }
-
-                if (CellIdIsUnique)
-                {
-                    if (uniqueCellEdgeNeighbors.size() >= maxUniqueNeighbors)
-                    {   
-
-                        Foam::error("Overflow of unique neighbor cell, "
-                            "this should not happen!"
-                            " Aborting ...");
-
-                        Info<< "Error" << endl;
-                    }
-                    else
-                    {
-                        uniqueCellEdgeNeighbors.append(cNeighboarCells[i]);
-                    }
-                }
-            }
-        }
-    }
-
-    if (uniqueCellEdgeNeighbors.size() > 0)
-    {
-        uniqueCellEdgeNeighbors.shrink();
-    }
-
-    Foam::labelList cellEdgeNeighbors(uniqueCellEdgeNeighbors);
-
-    return cellEdgeNeighbors;
-}
-
 
 
 void FoamCpad::cpa::getProperties
@@ -425,4 +365,153 @@ FoamCpad::cpa::~cpa()
 {
     // processorBoundaryFaceIDs.~List();
     // adjacentBoundariesNames.~List();
+}
+
+
+
+Foam::labelList FoamCpad::cellFaceNeighbors
+(
+    Foam::label cell,
+    const Foam::fvMesh &mesh
+)
+{
+    return mesh.cellCells()[cell];
+}
+
+
+Foam::labelList FoamCpad::cellEdgeNeighbors
+(
+    Foam::label cell,
+    const Foam::fvMesh &mesh
+)
+{
+    Foam::labelList cEdges = mesh.cellEdges()[cell];
+    Foam::label maxUniqueNeighbors = 40;
+    Foam::DynamicList<label> uniqueCellEdgeNeighbors(maxUniqueNeighbors);
+
+    // Info << "Edge nodes: " << cEdges.size() << endl;
+   
+     // musst be greater or equal than max possible length...
+
+    forAll(cEdges, j)
+    {
+        Foam::labelList cNeighboarCells = mesh.edgeCells()[cEdges[j]];
+
+        // Info << "Edge node Cells: " << cNeighboarCells.size() << endl;
+        
+        forAll(cNeighboarCells, i)
+        {
+            if(uniqueCellEdgeNeighbors.size() < 1)
+            {
+                uniqueCellEdgeNeighbors.append(cNeighboarCells[i]);
+            }
+            else
+            {
+                bool CellIdIsUnique = true;
+
+                forAll(uniqueCellEdgeNeighbors, k)
+                {
+                    if (uniqueCellEdgeNeighbors[k] == cNeighboarCells[i])
+                    {
+                        CellIdIsUnique = false;
+                    }
+                }
+
+                if (CellIdIsUnique)
+                {
+                    if (uniqueCellEdgeNeighbors.size() >= maxUniqueNeighbors)
+                    {   
+
+                        Foam::error("Overflow of unique neighbor cell, "
+                            "this should not happen!"
+                            " Aborting ...");
+
+                        Info<< "Error" << endl;
+                    }
+                    else
+                    {
+                        uniqueCellEdgeNeighbors.append(cNeighboarCells[i]);
+                    }
+                }
+            }
+        }
+    }
+
+    if (uniqueCellEdgeNeighbors.size() > 0)
+    {
+        uniqueCellEdgeNeighbors.shrink();
+    }
+
+    Foam::labelList cellEdgeNeighbors(uniqueCellEdgeNeighbors);
+
+    return cellEdgeNeighbors;
+}
+
+
+Foam::labelList FoamCpad::cellPointNeighbors
+(
+    Foam::label cell,
+    const Foam::fvMesh &mesh
+)
+{
+    Foam::labelList cPoints = mesh.cellPoints()[cell];
+    Foam::label maxUniqueNeighbors = 40;
+    Foam::DynamicList<label> uniqueCellPointNeighbors(maxUniqueNeighbors);
+
+    // Info << "Edge nodes: " << cPoints.size() << endl;
+   
+     // musst be greater or equal than max possible length...
+
+    forAll(cPoints, j)
+    {
+        Foam::labelList cNeighboarCells = mesh.pointCells()[cPoints[j]];
+
+        // Info << "Edge node Cells: " << cNeighboarCells.size() << endl;
+        
+        forAll(cNeighboarCells, i)
+        {
+            if(uniqueCellPointNeighbors.size() < 1)
+            {
+                uniqueCellPointNeighbors.append(cNeighboarCells[i]);
+            }
+            else
+            {
+                bool CellIdIsUnique = true;
+
+                forAll(uniqueCellPointNeighbors, k)
+                {
+                    if (uniqueCellPointNeighbors[k] == cNeighboarCells[i])
+                    {
+                        CellIdIsUnique = false;
+                    }
+                }
+
+                if (CellIdIsUnique)
+                {
+                    if (uniqueCellPointNeighbors.size() >= maxUniqueNeighbors)
+                    {   
+
+                        Foam::error("Overflow of unique neighbor cell, "
+                            "this should not happen!"
+                            " Aborting ...");
+
+                        Info<< "Error" << endl;
+                    }
+                    else
+                    {
+                        uniqueCellPointNeighbors.append(cNeighboarCells[i]);
+                    }
+                }
+            }
+        }
+    }
+
+    if (uniqueCellPointNeighbors.size() > 0)
+    {
+        uniqueCellPointNeighbors.shrink();
+    }
+
+    Foam::labelList cellPointNeighbors(uniqueCellPointNeighbors);
+
+    return cellPointNeighbors;
 }

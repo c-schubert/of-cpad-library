@@ -32,19 +32,36 @@ FoamCpad::cpad::cpad
     alphaMin = readScalar(cpadDict.lookup("alphaMinThreshold"));
     reportFileStr = word(cpadDict.lookup("reportFileName"));
     targetAlpha =  readLabel(cpadDict.lookup("targetPhase"));
-    Foam::word cellNodeNeighborDetectionActiveStr = word(cpadDict.lookup("detectOverCellNodes"));
+    Foam::word cellConnectionModeStr = word(cpadDict.lookup("detectOver"));
 
+
+    Info << cellConnectionModeStr << endl;
     if (Foam::Pstream::parRun())
     {
         Info << "cpa detection for parallel run:" << endl;
+        Info << cellConnectionModeStr << endl;
         // There are additional boundaries called processor where the exchange between mpi process is handeled ...
         reportFileStr = Foam::word(std::to_string(Foam::Pstream::myProcNo())) 
                         + "_" + reportFileStr;
     }
 
-    if (cellNodeNeighborDetectionActiveStr != "on")
+    if (cellConnectionModeStr == "faces")
     {
-        bool cellNodeNeighborDetectionActive = false;
+        cellConDectMode = 0;
+    }
+    else if (cellConnectionModeStr == "edges")
+    {
+        cellConDectMode = 1;
+    }
+    else if (cellConnectionModeStr == "points")
+    {
+        cellConDectMode = 2;
+    }
+    else
+    {
+        Info<< "Warning: No valid setting for detectOver setting given. "
+            << "Falling back to face detection mode" << endl;
+        cellConDectMode = 0;
     }
 
      Foam::volScalarField& alpha = (targetAlpha == 2) ? mixture.alpha2() : mixture.alpha1();
@@ -56,13 +73,17 @@ FoamCpad::cpad::cpad
     Info<< "Starting continous phase detection for phase " << targetAlpha 
         << " with alphaMin " << alphaMin << " using ";
 
-    if (cellNodeNeighborDetectionActive)
-    {
-        Info<<"cell node detection ";
-    }
-    else
+    if (cellConDectMode == 0)
     {
         Info<<"cell face detection ";
+    }
+    else if (cellConDectMode == 1)
+    {
+        Info<<"cell edge detection ";
+    }
+    else if (cellConDectMode == 2)
+    {
+        Info<<"cell point detection ";
     }
 
     Info<<"at time " << runTime.value() << endl;
@@ -96,7 +117,7 @@ FoamCpad::cpad::cpad
         alphaMin,
         rho,
         isCpadCell,
-        cellNodeNeighborDetectionActive,
+        cellConDectMode,
         cpaList
     );
 }
@@ -108,7 +129,7 @@ void FoamCpad::cpad::cpadSearch
     Foam::scalar alphaMin,
     const Foam::dimensionedScalar& rho,
     Foam::boolList& isCpadCell,
-    bool cellNodeNeighborDetectionActive,
+    Foam::label cellConDectMode,
     std::vector<cpa>& cpaList
 )
 {
@@ -128,7 +149,7 @@ void FoamCpad::cpad::cpadSearch
                     rho,
                     isCpadCell,
                     isCellChecked,
-                    cellNodeNeighborDetectionActive
+                    cellConDectMode
                 );
                 cpaList.push_back(contPhaseArea);
             }

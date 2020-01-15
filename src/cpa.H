@@ -51,7 +51,7 @@ private:
             Foam::boolList& isCpadCell,
             Foam::boolList& isCellChecked,
             Foam::labelList& cpaCells,
-            bool cellNodeNeighborDetectionActive
+            Foam::label cellConDectMode
         );
 
 
@@ -68,19 +68,13 @@ public:
             const Foam::dimensionedScalar& rho,
             Foam::boolList& isCpadCell,
             Foam::boolList& isCellChecked,
-            bool cellNodeNeighborDetectionActive
+            Foam::label cellConDectMode
         );
 
     // Member Functions
 
 
         void printProperties();
-
-        Foam::labelList cellEdgeNeighbors
-        (
-            Foam::label cell,
-            const Foam::fvMesh &mesh
-        );
 
         Foam::labelList get_cells();
         Foam::label get_noCells();
@@ -96,5 +90,27 @@ public:
     // Destructor
         ~cpa();
 };
+
+
+Foam::labelList cellFaceNeighbors
+(
+    Foam::label cell,
+    const Foam::fvMesh &mesh
+);
+
+
+Foam::labelList cellEdgeNeighbors
+(
+    Foam::label cell,
+    const Foam::fvMesh &mesh
+);
+
+Foam::labelList cellPointNeighbors
+(
+    Foam::label cell,
+    const Foam::fvMesh &mesh
+);
+
 }
+
 #endif
