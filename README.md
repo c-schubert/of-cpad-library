@@ -19,7 +19,7 @@ for each timestep:
   - alpha_mean (volume averaged)
   - connected boundaries
 
-You may choose between detection between cells faces:
+You may choose between detection between cells faces, cell edges and dell points, i.e.:
 
 ![GitHub Logo](/images/dropletDetection_cn_vs_cf.png)
 
@@ -142,7 +142,11 @@ detectOver          "faces";    // continuous area detection over: "faces" "edge
 ```
 
 ### Parallel considerations
-This library also works for parallel cases, but there is no consolidation of cpas which belong together, but are located on different processors, during runtime. Instead each processor writes it's own results file, where necessary parallel information is given. This was done for ease of implementation and to reduce communication overhead during runtime. The different files can be reconstructed using the Julia scripts, which can be found under ./eval.
+This library also works for parallel cases, but there is no consolidation of cpas which belong together, but are located on different processors, during runtime. Instead each processor writes it's own results file, where necessary parallel information is given. 
+This was done for ease of implementation and to reduce communication overhead during runtime. The different files can be reconstructed using the Julia scripts, which can be found under ./eval.
+
+**Currently any other detections other than "over faces", is not working across processor boundary faces.** So if ``detectOver`` "edges" or "points" is choosen, there may, under certain circumstances, be deviations between serial and parallel cpa evaluations. 
+
 
 ## Evaluation of results
 Under ./eval there a some exemplary julia script and functions which should make the evaluation of results quite simple.

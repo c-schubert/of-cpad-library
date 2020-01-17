@@ -17,8 +17,10 @@ include("./libjl/cpa_eval_functions.jl")
 include("./libjl/cpa_print_functions.jl")
 include("./libjl/cpa_eval_help_functions.jl")
 
-_dir = joinpath(joinpath(@__DIR__, "tests"),"test1")
+#_dir = joinpath(joinpath(@__DIR__, "tests"),"test1")
 # _dir = joinpath(joinpath(@__DIR__, "tests"),"test3") # another test
+_dir = joinpath(joinpath(@__DIR__, "tests"),"test5") # fluent data
+
 
 cpa_parallel_identifier = "_cpa"
 
