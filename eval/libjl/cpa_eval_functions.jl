@@ -48,9 +48,11 @@ function reconstruct_filter_parcpas(
     # all cpas should have equal amount of times (some may contain nothing
     # for some times)
     for tid=1:no_t_steps
-        println("Time id - tid: ", tid, "\n")
+        println("Time id - tid: ", tid)
+        println("Time: ", cpas[1][tid].time, "\n")
 
         haspidcpas = falses(no_procs)
+        haspidparcpas = falses(no_procs)
         pid_iscpapar = Array{Union{Array{Bool,1},Nothing},1}(undef, no_procs)
         pid_iscpareconstructed = Array{Union{Array{Bool,1},Nothing},1}(undef, no_procs)
     
@@ -64,49 +66,54 @@ function reconstruct_filter_parcpas(
                                          }
                                     , 1
                                  }(undef,no_procs)
-    
+        
+        println("Collecting Parallel Information!")
+
         for pid=1:1:no_procs
-            if cpas[pid][tid].s != nothing
+            if cpas[pid][tid].cpas != nothing
                 haspidcpas[pid] = true
-    
-                nocpas = length(cpas[pid][tid].s)
+                haspidparcpas[pid] = false
+
+                nocpas = length(cpas[pid][tid].cpas)
                 iscpareconstructed = falses(nocpas)
                 iscpapar = falses(nocpas)
-                cpas_toids_arr = Array{Union{Nothing, Array{Int64, 1}}, 1}(undef,nocpas)
+                cpas_ptoids_arr = Array{Union{Nothing, Array{Int64, 1}}, 1}(undef,nocpas)
     
                 for i=1:nocpas
-                    if !isnothing(cpas[pid][tid].s[i].pinfo)
+                    if !isnothing(cpas[pid][tid].cpas[i].pinfo)
                         # which processor boundaries to look for?
                         iscpapar[i] = true
-                        bstr_arr = cpas[pid][tid].s[i].adj_boundaries
+                        bstr_arr = cpas[pid][tid].cpas[i].adj_boundaries
                         topids = getboundarypidsandcells(bstr_arr, pid)
-                        cpas_toids_arr[i] = topids 
+                        cpas_ptoids_arr[i] = topids 
+                        haspidparcpas[pid] = true
                     else
-                        cpas_toids_arr[i] = nothing
+                        cpas_ptoids_arr[i] = nothing
                     end
                 end
                 
                 pid_iscpareconstructed[pid] = iscpareconstructed
                 pid_iscpapar[pid] = iscpapar
-                pid_parcpa_ptoids[pid] = cpas_toids_arr
+                pid_parcpa_ptoids[pid] = cpas_ptoids_arr
             else
+                haspidparcpas[pid] = false
                 pid_iscpareconstructed[pid] = nothing
                 pid_iscpapar[pid] = nothing
                 pid_parcpa_ptoids[pid] = nothing
             end
         end
     
-        # println("-------Info---------")
-        # println(length(pid_iscpapar))
-        # for pid=1:1:no_procs
-        #     println("My pid:", pid)
-        #     println("My par bound.  ids:")
-        #     println(pid_iscpapar[pid])
-        #     println("Parallel to processors:")
-        #     println(pid_parcpa_ptoids[pid])
-        #     println("--- End pid")
-        # end
-        # println("------End Info--------\n\n")
+        println("-------Info---------")
+        println(length(pid_iscpapar))
+        for pid=1:1:no_procs
+            println("My pid:", pid)
+            println("Is cpa par?:")
+            println(pid_iscpapar[pid])
+            println("Cpa par to pids list:")
+            printarrayarray(pid_parcpa_ptoids[pid])
+            println("--- End pid")
+        end
+        println("------End Info--------\n\n")
     
     
         pid_parcpa_ptocpaids = Array{
@@ -119,71 +126,107 @@ function reconstruct_filter_parcpas(
                                             }
                                         , 1
                                         }(undef,no_procs)
+
+        pid_parcpa_ptocpapids = Array{
+                                        Union{
+                                            Nothing,  
+                                            Array{
+                                                    Union{Nothing, Array{Union{Nothing, Int64}, 1}}
+                                                    , 1
+                                                    }
+                                            }
+                                        , 1
+                                        }(undef,no_procs)
+
+
     
         for pfromid=1:1:no_procs
-            println("pfromid: ", pfromid)
-            ispfromcpapar = pid_iscpapar[pfromid]
-            if !isnothing(ispfromcpapar)
-                println(length(ispfromcpapar)) 
-                ptocpaids =  Array{Union{Nothing, Array{Union{Nothing, Int64}, 1}}, 1}(undef,length(ispfromcpapar)) 
+            println("pfrom: ", pfromid)
+
+            if haspidparcpas[pfromid]
+                no_pfrom_cpas = length(cpas[pfromid][tid].cpas)
+
+                ptocpaids =   Array{Union{Nothing, Array{Union{Nothing, Int64}, 1}}, 1}(undef,no_pfrom_cpas) 
+                ptocpapids =  Array{Union{Nothing, Array{Union{Nothing, Int64}, 1}}, 1}(undef,no_pfrom_cpas) 
+
+                for cpafromid=1:1:no_pfrom_cpas
+                    arrid_cpatoids = Array{Union{Nothing, Int64}, 1}(undef,0)     
+                    arrid_cpatopids = Array{Union{Nothing, Int64}, 1}(undef,0) 
     
-                for cpafromid in eachindex(ispfromcpapar)
-                    arrid_toids = Array{Union{Nothing, Int64}, 1}(undef,0)     
+                    if pid_iscpapar[pfromid][cpafromid]
+                        print("\t from cpa ",  cpafromid, "\n")
     
-                    if ispfromcpapar[cpafromid]
-                        println("cpafromid: ",  cpafromid)
-    
-                        bcellsfrom = cpas[pfromid][tid].s[cpafromid].pinfo.pcellids
+                        bcellsfrom = cpas[pfromid][tid].cpas[cpafromid].pinfo.pcellids
                         ptoids = pid_parcpa_ptoids[pfromid][cpafromid]
                         # possible parallel boundary cpa's ppbcpas
                         for ptoid in ptoids
                             if ptoid > pfromid
-                                isptocpapar = pid_iscpapar[ptoid]
                                 # going the other way should not be necessary
-                                for cpatoid in eachindex(pid_iscpapar[ptoid])
-                                    if isptocpapar[cpatoid]
-                                        println("ptoid: ", ptoid)
-                                        println("cpatoid: ", cpatoid)
+                                no_pto_cpas = length(cpas[ptoid][tid].cpas)
+
+                                for cpatoid=1:1:no_pto_cpas
+                                    if pid_iscpapar[ptoid][cpatoid]
+                                        print("\t\tto pid ", ptoid, "\t")
+                                        print("(cpatoid: ", cpatoid,")\t")
                             
                                         if  (
                                             Bool(sum(pid_parcpa_ptoids[ptoid][cpatoid] .== pfromid)) 
-                                            && !isnothing(cpas[ptoid][tid].s[cpatoid].pinfo)
+                                            && !isnothing(cpas[ptoid][tid].cpas[cpatoid].pinfo)
                                             )
-                                            println("possible match?")
-                                            bcellsto = cpas[ptoid][tid].s[cpatoid].pinfo.pcellids
+                                            #println("possible match?")
+                                            bcellsto = cpas[ptoid][tid].cpas[cpatoid].pinfo.pcellids
     
                                             if valofvec1_occursin_vec2(abs.(bcellsfrom), abs.(bcellsto))
-                                                println("match!")
+                                                print("Match!\t")
                                                 # append
-                                                push!(arrid_toids, cpatoid)
+                                                push!(arrid_cpatoids, cpatoid)
+                                                push!(arrid_cpatopids, ptoid)
                                             end
                                         end
                                     end
                                 end     
-                                if !isassigned(arrid_toids,1)
-                                    arrid_toids = nothing
-                                    println("Warning no assignment of arrid_toids!")
+                                if !isassigned(arrid_cpatoids,1)
+                                    push!(arrid_cpatoids, nothing)
+                                    push!(arrid_cpatopids, nothing)
+                                    print("Warning no assignment of arrid_cpatoids (no cpa accross boudnary?)! \t")
                                 end  
                             else
-                                push!(arrid_toids, nothing)
+                                push!(arrid_cpatoids, nothing)
+                                push!(arrid_cpatopids, nothing)
                             end
+                            print("\n")
                         end
+                        print("\n")
                     else
-                        arrid_toids = nothing
+                        arrid_cpatoids = nothing
+                        arrid_cpatopids = nothing
                     end
     
-                    ptocpaids[cpafromid] = arrid_toids
+                    ptocpaids[cpafromid] = arrid_cpatoids
+                    ptocpapids[cpafromid] = arrid_cpatopids
                 end
     
     
                 pid_parcpa_ptocpaids[pfromid] = ptocpaids
+                pid_parcpa_ptocpapids[pfromid] = ptocpapids
             else
                 pid_parcpa_ptocpaids[pfromid] = nothing
+                pid_parcpa_ptocpapids[pfromid] = nothing
             end
-            println("-------------------")
         end
-    
-        println("pid_parcpa_ptoids: ", pid_parcpa_ptoids)
+        
+
+        println("-------Info 2---------")
+        for pid=1:1:no_procs
+            println("My pid:", pid)
+            println("pid_parcpa_ptoids:")
+            printarrayarray(pid_parcpa_ptoids[pid])
+            println("pid_parcpa_ptocpaids:")
+            printarrayarray(pid_parcpa_ptocpaids[pid])
+            println("pid_parcpa_ptocpapids:")
+            printarrayarray(pid_parcpa_ptocpapids[pid])
+        end
+        println("------End Info--------\n\n")
             # Set Recontructed S
         println("----------------------------------------------")
         println("----------------------------------------------")
@@ -192,12 +235,13 @@ function reconstruct_filter_parcpas(
         #RECONSTRUCT 
         ####################### 
         # s_at_t = CpaInfo[]
+        println("Starting reconstruction! \n")
 
         rec_cpas = CpaInfo[]
         time = cpas[1][tid].time
         for pid=1:1:no_procs
             if haspidcpas[pid]
-                nocpas = length(cpas[pid][tid].s)
+                nocpas = length(cpas[pid][tid].cpas)
                 for icpa=1:nocpas
                     if !pid_iscpareconstructed[pid][icpa]
                         if pid_iscpapar[pid][icpa] 
@@ -207,12 +251,12 @@ function reconstruct_filter_parcpas(
                                                         tid, 
                                                         pid, 
                                                         icpa, 
-                                                        pid_parcpa_ptoids, 
+                                                        pid_parcpa_ptocpapids, 
                                                         pid_parcpa_ptocpaids, 
                                                         pid_iscpareconstructed
                                                     )
                         else
-                            rec_cpa = get_cpa_from_rawcpa(cpas[pid][tid].s[icpa])
+                            rec_cpa = get_cpa_from_rawcpa(cpas[pid][tid].cpas[icpa])
                         end
 
                         if (filter_add_cpa(rec_cpa, filter_alpha_max_min, filter_no_cells_min))
@@ -251,53 +295,54 @@ function reconstruct_cpa(
                         tid::Int64, 
                         pid::Int64,
                         i_cpa::Int64,
-                        pid_parcpa_ptoids::Array{Union{Nothing, Array{ Union{Nothing, Array{Union{Nothing, Int64}, 1}}, 1}}, 1},
+                        pid_parcpa_ptocpapids::Array{Union{Nothing, Array{ Union{Nothing, Array{Union{Nothing, Int64}, 1}}, 1}}, 1},
                         pid_parcpa_ptocpaids::Array{Union{Nothing, Array{Union{Nothing, Array{Union{Nothing, Int64}, 1}}, 1}}, 1},
                         pid_iscpareconstructed::Array{Union{Array{Bool,1},Nothing},1}
                         )
 
     println("Reconstruction of cpa ", i_cpa, " of processor ", pid)
-    cpa_from = get_cpa_from_rawcpa(cpas[pid][tid].s[i_cpa])
+    cpa_from = get_cpa_from_rawcpa(cpas[pid][tid].cpas[i_cpa])
     cpa_res = cpa_from
 
-    if !(pid_iscpareconstructed[pid][i_cpa])
-        ptoids = pid_parcpa_ptoids[pid][i_cpa]
+    if (   !(pid_iscpareconstructed[pid][i_cpa]) 
+        && !isnothing(pid_parcpa_ptocpaids[pid][i_cpa]))
+
+        ptoids = pid_parcpa_ptocpapids[pid][i_cpa]
         i_cpato_idces = pid_parcpa_ptocpaids[pid][i_cpa]
+
+        if length(ptoids) != length(i_cpato_idces) 
+            error("Error reconstruct_cpa(): Should be same length!")
+        end
 
         pid_iscpareconstructed[pid][i_cpa] = true
 
-        for i in eachindex(ptoids)
+        for i=1:1:length(ptoids)
             ptoid = ptoids[i]
-            if ptoid > pid
-                for i_cpato in i_cpato_idces[i]
-                    if (isnothing(ptoid) || isnothing(i_cpato))
-                        println("Warning reconstruct_cpa(): Something is not right here...")
-                    else
+            i_cpato = i_cpato_idces[i]
 
-                        if (!pid_iscpareconstructed[ptoid][i_cpato]
-                            && !isnothing(pid_parcpa_ptoids[ptoid][i_cpato]) 
-                            && (length(pid_parcpa_ptoids[ptoid][i_cpato]) > 1)
-                            )
-                            #recursion
-                            println("recursion ...")
-                            cpa_to = reconstruct_cpa(   
-                                cpas, 
-                                tid, 
-                                ptoid, 
-                                i_cpato, 
-                                pid_parcpa_ptoids, 
-                                pid_parcpa_ptocpaids, 
-                                pid_iscpareconstructed
-                            )
-                        else
-                            cpa_to = get_cpa_from_rawcpa(cpas[ptoid][tid].s[i_cpato])
+            if !isnothing(ptoid) && !isnothing(i_cpato)  && ptoid > pid
+                if (!pid_iscpareconstructed[ptoid][i_cpato]
+                    && !isnothing(pid_parcpa_ptocpapids[ptoid][i_cpato]) 
+                    && (length(pid_parcpa_ptocpapids[ptoid][i_cpato]) > 1)
+                    )
+                    #recursion
+                    println("recursion ...")
+                    cpa_to = reconstruct_cpa(   
+                        cpas, 
+                        tid, 
+                        ptoid, 
+                        i_cpato, 
+                        pid_parcpa_ptocpapids, 
+                        pid_parcpa_ptocpaids, 
+                        pid_iscpareconstructed
+                    )
+                else
+                    cpa_to = get_cpa_from_rawcpa(cpas[ptoid][tid].cpas[i_cpato])
 
-                            pid_iscpareconstructed[ptoid][i_cpato] = true
-                        end
-
-                        cpa_res = cpa_res + cpa_to
-                    end
+                    pid_iscpareconstructed[ptoid][i_cpato] = true
                 end
+
+                cpa_res = cpa_res + cpa_to
             end
         end
 

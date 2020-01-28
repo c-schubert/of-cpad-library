@@ -140,7 +140,7 @@ function get_cpas_with_boundary(cpas::Cpas,  boundaryname::Union{String,Nothing}
     hascpa = false
     cpas_with_bname = Array{CpaInfo,1}(undef,0)
 
-    for cpainfo in cpas.s
+    for cpainfo in cpas.cpas
         if has_cpa_adj_boundary(cpainfo, boundaryname)
             hascpa = true
             push!(cpas_with_bname, cpainfo)
@@ -176,7 +176,7 @@ function get_cpasarray_without_boundaries(cpasarr::Array{Cpas,1}, boundarynames_
 
         curret_cpas_have_bname = false
         cpainfo_withoutbnames = Array{CpaInfo,1}(undef,0) 
-        for cpainfo in cpas.s
+        for cpainfo in cpas.cpas
             cpahasbname = false
             for bname in boundarynames_arr
                 if has_cpa_adj_boundary(cpainfo, bname)
@@ -196,4 +196,29 @@ function get_cpasarray_without_boundaries(cpasarr::Array{Cpas,1}, boundarynames_
     end
 
     return cpasarr_without_bnames
+end
+
+
+function printarrayarray(arr)
+    println("[")
+    if !isnothing(arr)
+        for i=1:length(arr)
+            print("\t[")
+
+            if !isnothing(arr[i])
+                print(arr[i][1])
+
+                for j=2:length(arr[i])
+                    print(", " , arr[i][j])
+                end
+            else
+                print(arr[i])
+            end
+
+            print("]\n")
+        end
+    else
+        println(arr)
+    end
+    println("]")
 end

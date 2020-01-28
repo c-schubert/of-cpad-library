@@ -35,10 +35,10 @@ end
 function printrawcpas(rpfs::CpasRawPrefiltered)
     println("->Time: " * string(rpfs.time) * "\n")
 
-    if !isnothing(rpfs.s)
-        println("Containing " * string(length(rpfs.s)) * " Cpas:\n--")
-        for i=1:1:length(rpfs.s)
-            printrawcpa(rpfs.s[i])
+    if !isnothing(rpfs.cpas)
+        println("Containing " * string(length(rpfs.cpas)) * " Cpas:\n--")
+        for i=1:1:length(rpfs.cpas)
+            printrawcpa(rpfs.cpas[i])
         end
     else
         println("Empty")
@@ -74,10 +74,10 @@ end
 function printcpas(cpa::Cpas)
     println("->Time: " * string(cpa.time) * "\n")
 
-    if !isnothing(cpa.s)
-        println("Containing " * string(length(cpa.s)) * " Cpas:\n--")
-        for i=1:1:length(cpa.s)
-            printcpainfo(cpa.s[i])
+    if !isnothing(cpa.cpas)
+        println("Containing " * string(length(cpa.cpas)) * " Cpas:\n--")
+        for i=1:1:length(cpa.cpas)
+            printcpainfo(cpa.cpas[i])
         end
     else
         println("Empty")
@@ -104,7 +104,7 @@ function printcpastofile(cpas_over_t::Array{Cpas,1}, file::String)
         write(io, "{\n")
         write(io, string(cpas.time)*"\n")
         write(io, "cell_count[com.(x)_in_m,com.(y),com.(z),mass_in_kg,volume_in_m³,cellAveragedAlpha,maxAlpha,[list_of_boundary_names],[list_of_processor_cells]]\n")
-        for cpa in cpas.s
+        for cpa in cpas.cpas
             write(io, string(cpa.no_cells))
             write(io, "[")
             write(io, string(cpa.x)*",")
@@ -134,3 +134,80 @@ function printcpastofile(cpas_over_t::Array{Cpas,1}, file::String)
 end
 
 
+function cpas_to_paraview(cpas_over_t::Array{Cpas,1}, folder::String ,fileprefix::String, dt::Float64)
+
+    if !isdir(folder)
+        mkdir(folder)
+    end
+
+    k = 1
+
+    for (i, cpas) in enumerate(cpas_over_t)
+        if isapprox(cpas.time,k*0.025, atol=1E-5)
+        
+            #print("\n",cpas.time)
+
+            file = joinpath(folder, fileprefix*"."*string(k-1))
+            io = open(file, "w")
+
+            write(io, "com.(x)_in_m,com.(y),com.(z),mass_in_kg,volume_in_m³\n")
+
+            for cpa in cpas
+                write(io, string(cpa.x)*",")
+                write(io, string(cpa.y)*",")
+                write(io, string(cpa.z)*",")
+                write(io, string(cpa.mass)*",")
+                write(io, string(cpa.vol)*"\n")
+            end
+
+            close(io)
+            k += 1
+        end
+    end
+    
+    println("Cpas to paraview finished - ", string(k-1)," cpa Files written!")        
+end
+    
+
+
+function reduced_cpas_to_paraview(cpas_over_t::Array{Cpas,1}, red_cpas_over_t::Array{Cpas,1}, folder::String ,fileprefix::String, dt::Float64)
+
+    if !isdir(folder)
+        mkdir(folder)
+    end
+
+    j = 1
+    k = 1
+
+    for (i, cpas) in enumerate(cpas_over_t)
+        if isapprox(cpas.time,k*0.025, atol=1E-5)
+            
+                #print("\n",cpas.time)
+
+                file = joinpath(folder, fileprefix*"."*string(cpas.time))
+                io = open(file, "w")
+
+                write(io, "com.(x)_in_m,com.(y),com.(z),mass_in_kg,volume_in_m³\n")
+
+                if j <= length(red_cpas_over_t) && isapprox(cpas.time, red_cpas_over_t[j].time, atol=1E-4)
+                    for cpa in red_cpas_over_t[j].cpas
+                        write(io, string(cpa.x)*",")
+                        write(io, string(cpa.y)*",")
+                        write(io, string(cpa.z)*",")
+                        write(io, string(cpa.mass)*",")
+                        write(io, string(cpa.vol)*"\n")
+                    end
+                end
+
+                close(io)
+                k += 1
+            end
+
+        if j <= length(red_cpas_over_t) && isapprox(cpas.time, red_cpas_over_t[j].time, atol=1E-4)
+            j += 1
+        end
+
+    end
+    
+    println("Reduced cpas to paraview finished - ", string(k-1)," cpa Files written!")     
+end

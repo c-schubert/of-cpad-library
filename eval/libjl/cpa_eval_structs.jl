@@ -35,7 +35,7 @@ end
 
 struct CpasRawPrefiltered
    time::Float64 
-   s::Union{Array{CpaInfoRaw,1}, Nothing}
+   cpas::Union{Array{CpaInfoRaw,1}, Nothing}
 end
 
 
@@ -54,7 +54,7 @@ end
 
 struct Cpas
    time::Float64 
-   s::Array{CpaInfo,1}
+   cpas::Array{CpaInfo,1}
 end
 
 
@@ -140,8 +140,8 @@ function convert_raw_to_final(raw_cpas_over_t::Array{CpasRawPrefiltered,1})
     for (i,raw_cpas) in enumerate(raw_cpas_over_t)
 
         time = raw_cpas.time
-        cpas =  Array{CpaInfo,1}(undef, length(raw_cpas.s))
-        for (ii,raw_cpa) in enumerate(raw_cpas.s)
+        cpas =  Array{CpaInfo,1}(undef, length(raw_cpas.cpas))
+        for (ii,raw_cpa) in enumerate(raw_cpas.cpas)
 
             cpas[ii] = CpaInfo(
                                 raw_cpa.no_cells, 
