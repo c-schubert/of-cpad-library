@@ -38,6 +38,12 @@ private:
             const Foam::dimensionedScalar& rho
         );
 
+        void getPropertiesThermo
+        (
+            Foam::volScalarField &alpha,
+            Foam::volScalarField &rho
+        );
+
         void getCpaBoundaryList
         (
             Foam::volScalarField& alpha
@@ -66,6 +72,17 @@ public:
             Foam::volScalarField& alpha,
             Foam::scalar alphaMin,
             const Foam::dimensionedScalar& rho,
+            Foam::boolList& isCpadCell,
+            Foam::boolList& isCellChecked,
+            Foam::label cellConDectMode
+        );
+
+        cpa
+        (
+            Foam::label initialCell,
+            Foam::volScalarField& alpha,
+            Foam::scalar alphaMin,
+            Foam::volScalarField& rho,
             Foam::boolList& isCpadCell,
             Foam::boolList& isCellChecked,
             Foam::label cellConDectMode

@@ -1,16 +1,23 @@
 EXE_INC = \
+    -I$(FOAM_SOLVERS)/multiphase/compressibleInterFoam/twoPhaseMixtureThermo \
     -I$(LIB_SRC)/transportModels/twoPhaseMixture/lnInclude \
     -I$(LIB_SRC)/transportModels \
     -I$(LIB_SRC)/transportModels/incompressible/lnInclude \
     -I$(LIB_SRC)/transportModels/interfaceProperties/lnInclude \
     -I$(LIB_SRC)/transportModels/immiscibleIncompressibleTwoPhaseMixture/lnInclude \
+    -I$(LIB_SRC)/transportModels/compressible/lnInclude \
+    -I$(LIB_SRC)/thermophysicalModels/basic/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/dynamicFvMesh/lnInclude \
     -I$(LIB_SRC)/meshTools/lnInclude \
     -I$(LIB_SRC)/sampling/lnInclude
 
 LIB_LIBS = \
+    -ltwoPhaseMixture \
     -limmiscibleIncompressibleTwoPhaseMixture \
+    -ltwoPhaseMixtureThermo \
+    -lcompressibleTransportModels \
+    -lfluidThermophysicalModels \
     -lfiniteVolume \
     -ldynamicFvMesh \
     -lfvOptions \

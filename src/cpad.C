@@ -13,7 +13,59 @@ Copyright (c) 2019 Christian Schubert
 
 FoamCpad::cpad::cpad
 (
-    Foam::immiscibleIncompressibleTwoPhaseMixture& mixture,
+    immiscibleIncompressibleTwoPhaseMixture& mixture,
+    Foam::Time& runTime
+)
+{
+    IOdictionary cpadDict = FoamCpad::cpad::cpadGetDict(runTime);
+    targetAlpha =  readLabel(cpadDict.lookup("targetPhase"));
+
+    Foam::volScalarField& alpha = (targetAlpha == 2) ? mixture.alpha2() : mixture.alpha1();
+    const Foam::dimensionedScalar& rho = (targetAlpha == 2) ? mixture.rho2() : mixture.rho1();
+
+    FoamCpad::cpad::cpadInit(cpadDict,alpha, runTime);
+
+
+    FoamCpad::cpad::cpadSearch
+    (
+        alpha,
+        alphaMin,
+        rho,
+        isCpadCell,
+        cellConDectMode,
+        cpaList
+    );
+}
+
+
+FoamCpad::cpad::cpad
+(
+    twoPhaseMixtureThermo& mixture,
+    Foam::Time& runTime
+)
+{
+    IOdictionary cpadDict = FoamCpad::cpad::cpadGetDict(runTime);
+    targetAlpha =  readLabel(cpadDict.lookup("targetPhase"));
+
+    Foam::volScalarField& alpha = (targetAlpha == 2) ? mixture.alpha2() : mixture.alpha1();
+    Foam::volScalarField& rho = (targetAlpha == 2) ? mixture.thermo2().rho() : mixture.thermo1().rho();
+
+    FoamCpad::cpad::cpadInit(cpadDict,alpha, runTime);
+
+    FoamCpad::cpad::cpadSearchThermo
+    (
+        alpha,
+        alphaMin,
+        rho,
+        isCpadCell,
+        cellConDectMode,
+        cpaList
+    );
+}
+
+
+IOdictionary FoamCpad::cpad::cpadGetDict
+(
     Foam::Time& runTime
 )
 {
@@ -29,11 +81,21 @@ FoamCpad::cpad::cpad
         )
     );
 
+    return cpadDict;
+}
+
+
+void FoamCpad::cpad::cpadInit
+(
+    IOdictionary& cpadDict,
+    Foam::volScalarField& alpha,
+    Foam::Time& runTime
+)
+{
+    targetAlpha =  readLabel(cpadDict.lookup("targetPhase"));
     alphaMin = readScalar(cpadDict.lookup("alphaMinThreshold"));
     reportFileStr = word(cpadDict.lookup("reportFileName"));
-    targetAlpha =  readLabel(cpadDict.lookup("targetPhase"));
     Foam::word cellConnectionModeStr = word(cpadDict.lookup("detectOver"));
-
 
     Info << cellConnectionModeStr << endl;
     if (Foam::Pstream::parRun())
@@ -64,9 +126,7 @@ FoamCpad::cpad::cpad
         cellConDectMode = 0;
     }
 
-     Foam::volScalarField& alpha = (targetAlpha == 2) ? mixture.alpha2() : mixture.alpha1();
 
-     const Foam::dimensionedScalar& rho = (targetAlpha == 2) ? mixture.rho2() : mixture.rho1();
     // default value constructor
 
     Info<<"\n----------- CPAD -----------" << endl;
@@ -110,16 +170,6 @@ FoamCpad::cpad::cpad
             isCpadCell[c] = true;
         }
     }
-
-    FoamCpad::cpad::cpadSearch
-    (
-        alpha,
-        alphaMin,
-        rho,
-        isCpadCell,
-        cellConDectMode,
-        cpaList
-    );
 }
 
 
@@ -163,6 +213,46 @@ void FoamCpad::cpad::cpadSearch
     Info<< "Found: " << cpaList.size() << " cont. phase areas!\n\n" << endl;
 }
 
+
+void FoamCpad::cpad::cpadSearchThermo
+(
+    Foam::volScalarField& alpha,
+    Foam::scalar alphaMin,
+    Foam::volScalarField& rho,
+    Foam::boolList& isCpadCell,
+    Foam::label cellConDectMode,
+    std::vector<cpa>& cpaList
+)
+{
+    Foam::boolList isCellChecked(alpha.size(), false);
+
+    forAll(alpha, c)
+    {
+        if ((isCpadCell[c] == true) && !isCellChecked[c])
+        {
+            if(alpha[c] > alphaMin)
+            {
+                FoamCpad::cpa contPhaseArea
+                (
+                    c,
+                    alpha,
+                    alphaMin,
+                    rho,
+                    isCpadCell,
+                    isCellChecked,
+                    cellConDectMode
+                );
+                cpaList.push_back(contPhaseArea);
+            }
+            else
+            {
+                isCellChecked[c] = true;
+            }
+        }
+    }
+
+    Info<< "Found: " << cpaList.size() << " cont. phase areas!\n\n" << endl;
+}
 
 Foam::label FoamCpad::cpad::getNoCpas()
 {

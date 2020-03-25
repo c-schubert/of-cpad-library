@@ -9,7 +9,9 @@ Copyright (c) 2019 Christian Schubert
 
 #include "cpa.H"
 #include <vector>
+#include "twoPhaseMixture.H"
 #include "immiscibleIncompressibleTwoPhaseMixture.H"
+#include "twoPhaseMixtureThermo.H"
 
 namespace FoamCpad
 {
@@ -50,6 +52,12 @@ public:
             Foam::Time& runTime
         );
 
+        cpad
+        (
+            Foam::twoPhaseMixtureThermo& mixture,
+            Foam::Time& runTime
+        );
+
         // cpad
         // (
         //     Foam::immiscibleIncompressibleTwoPhaseMixture& mixture,
@@ -58,6 +66,14 @@ public:
 
     // Member Functions
         // void setCpadArea();
+        IOdictionary cpadGetDict(Foam::Time& runTime);
+
+        void cpadInit
+        (
+            IOdictionary& cpadDict,
+            Foam::volScalarField& alpha,
+            Foam::Time& runTime
+        );
 
         void cpadSearch
         (
@@ -66,6 +82,16 @@ public:
             const Foam::dimensionedScalar& rho,
             Foam::boolList& isCpadCell,
             Foam::label  cellConDectMode,
+            std::vector<cpa>& cpaList
+        );
+
+        void cpadSearchThermo
+        (
+            Foam::volScalarField& alpha,
+            Foam::scalar alphaMin,
+            Foam::volScalarField& rho,
+            Foam::boolList& isCpadCell,
+            Foam::label cellConDectMode,
             std::vector<cpa>& cpaList
         );
 

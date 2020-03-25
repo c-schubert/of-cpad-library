@@ -90,6 +90,13 @@ EXE = $(FOAM_USER_APPBIN)/solvercpad
 ```
 
 options:
+
+At least the following modification have to be done. Due to latest changes to support solver which either use twoPhaseMixutreThermo, twoPhaseMixture or immiscibleIncompressibleTwoPhaseMixture solver you have one of the following options:
+
+1. You have to make sure that your modified solver Make/options file includes all libraries from the cpad library. 
+2. Remove the unecessary mixtureTypes from cpad.H (includes and constructors) and recompile the library.
+
+But **at least** the following changes will be necessary:
 ```Makefile
 EXE_INC = \
     .
@@ -108,7 +115,6 @@ EXE_LIBS = \
     -L$(FOAM_USER_LIBBIN) \
     -lcpad \
 ```
-
 
 Compile and test!
 

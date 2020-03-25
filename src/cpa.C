@@ -55,6 +55,54 @@ FoamCpad::cpa::cpa
     // FoamCpad::cpa::printProperties();
 }
 
+
+FoamCpad::cpa::cpa
+(
+    Foam::label initialCell,
+    Foam::volScalarField& alpha,
+    Foam::scalar alphaMin,
+    Foam::volScalarField& rho,
+    Foam::boolList& isCpadCell,
+    Foam::boolList& isCellChecked,
+    Foam::label cellConDectMode
+)
+{
+
+    com = {0,0,0};
+    mass = 0;
+    volume = 0;
+
+    FoamCpad::cpa::cpaTreeSearch
+    (
+        initialCell,
+        alpha,
+        alphaMin,
+        isCpadCell,
+        isCellChecked,
+        cells,
+        cellConDectMode
+    );
+
+
+    FoamCpad::cpa::getPropertiesThermo
+    (
+        alpha,
+        rho
+    );
+
+
+    FoamCpad::cpa::getCpaBoundaryList
+    (
+        alpha
+    );
+
+    // Foam:word reportStr = FoamCpad::cpa::reportString();
+
+    // Info << reportStr << endl;
+
+    // FoamCpad::cpa::printProperties();
+}
+
 void FoamCpad::cpa::cpaTreeSearch
 (
     Foam::label initialCell,
@@ -170,6 +218,54 @@ void FoamCpad::cpa::getProperties
         alphaSum += alpha[c];
 
         scalar denominator = RHO*alpha[c]*mesh.V()[c];
+        denominator_sum += denominator;
+
+        xG += mesh.cellCentres()[c].x() * denominator;
+        yG += mesh.cellCentres()[c].y() * denominator;
+        zG += mesh.cellCentres()[c].z() * denominator;
+
+        maxAlpha = std::max(alpha[c], maxAlpha);
+    }
+
+    com.x() = xG/denominator_sum;
+    com.y() = yG/denominator_sum;
+    com.z() = zG/denominator_sum;
+
+    noCells = cells.size();
+
+    if (noCells >  0)
+    {
+        cellAveragedAlpha = alphaSum/Foam::scalar(noCells);
+    }
+}
+
+
+
+void FoamCpad::cpa::getPropertiesThermo
+(
+    Foam::volScalarField &alpha,
+    Foam::volScalarField& rho
+)
+{
+    Foam::scalar xG = 0;
+    Foam::scalar yG = 0;
+    Foam::scalar zG = 0;
+    Foam::scalar alphaSum = 0;
+    maxAlpha = 0;
+    mass = 0;
+    volume = 0;
+    Foam::scalar denominator_sum = 0;
+    const Foam::fvMesh &mesh = alpha.mesh();
+
+    forAll(cells, i)
+    {
+        Foam::label c = cells[i];
+
+        volume += alpha[c]*mesh.V()[c];
+        mass += rho.field()[c]*alpha[c]*mesh.V()[c];
+        alphaSum += alpha[c];
+
+        scalar denominator = rho.field()[c]*alpha[c]*mesh.V()[c];
         denominator_sum += denominator;
 
         xG += mesh.cellCentres()[c].x() * denominator;
