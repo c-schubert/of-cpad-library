@@ -11,4 +11,4 @@ newfilename="./testextract/${filename}"
 echo "Extracting $fromline-$toline of file $filename to file $newfilename"
 
 # echo "$fromline,${toline}p"
-sed -n "$fromline,${toline}p" $filename > $newfilename
+#sed -n "$fromline,${toline}p" $filename > $newfilename
