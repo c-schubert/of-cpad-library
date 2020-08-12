@@ -1,7 +1,7 @@
 # Continuous Phase Area Detection Solver/PostProcess library for OpenFOAM
 
 This is a very small library for the detection of continuos phase areas (cpas) in multiphase 
-VoF Simulations in OpenFOAM (OF). It may be used for Droplet, Bubble or Film Tracking 
+VoF Simulations in OpenFOAM (OF). It may be used for droplet, bubble or film Tracking 
 in transient VoF Simulations in OF.
 It can be used during runtime as addition to an existing two phase VoF solver, or as function in a custom post processing utility.
 
@@ -91,7 +91,7 @@ EXE = $(FOAM_USER_APPBIN)/solvercpad
 
 options:
 
-At least the following modification have to be done. Due to latest changes to support solver which either use twoPhaseMixutreThermo, twoPhaseMixture or immiscibleIncompressibleTwoPhaseMixture solver you have one of the following options:
+At least the following modifications have to be done. Due to latest changes to support solver, which either use twoPhaseMixutreThermo, twoPhaseMixture or immiscibleIncompressibleTwoPhaseMixture solver you have one of the following options:
 
 1. You have to make sure that your modified solver Make/options file includes all libraries from the cpad library. 
 2. Remove the unecessary mixtureTypes from cpad.H (includes and constructors) and recompile the library.
@@ -156,3 +156,12 @@ This was done for ease of implementation and to reduce communication overhead du
 
 ## Evaluation of results
 Under ./eval there a some exemplary julia script and functions which should make the evaluation of results quite simple.
+
+
+## Disclaimer
+
+*The project in which the work on this solver was fundet is over by now, so I wont be able to make many enhancements in the near future myself. We hope there will be future projects to make more enhancements to these solver collection. Nevertheless if there may be any pull request I will try to have a look ...*
+
+## Acknowledgment
+The authors gratefully acknowledge the support of the
+German Research Foundation (Deutsche Forschungsgemeinschaft – DFG) during the DFG project PF 394/24-1 (2016-2019).
